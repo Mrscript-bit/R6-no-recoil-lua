@@ -1,0 +1,443 @@
+--  SETTINGS
+local setup = false
+local mod = "alt"
+local disabler = "scrolllock"
+local sens_mul = 0.8
+local random_deviation = 1
+local FOV = 89 -- Default FOV, can be changed
+local Sens = 7 -- Base sensitivity
+local XFactor = 2.3 -- X-axis multiplier
+ 
+-- Scope modifiers
+local x1Modifier = 0.96
+local x15Modifier = 1.5
+local x2Modifier = 1.3
+local x25Modifier = 1.0
+local x3Modifier = 1.0
+local x4Modifier = 1.0
+local x5Modifier = 1.0
+local x12Modifier = 1.0
+ 
+-- Function to calculate ADS sensitivities
+function CalculateADSSens(scopeMultiplier, FOVMultiplier)
+  return math.floor((scopeMultiplier / (FOVMultiplier / 
+    (math.tan((FOVMultiplier * FOV) * math.pi / 180 / 2) / 
+     math.tan(FOV * math.pi / 180 / 2)))) * 
+    XFactor * FOVMultiplier * Sens)
+end
+ 
+-- Calculate scope sensitivities
+local scopeSens = {
+  ["1x"] = CalculateADSSens(x1Modifier, 0.6),
+  ["1.5x"] = CalculateADSSens(x15Modifier, 0.59), 
+  ["2x"] = CalculateADSSens(x2Modifier, 0.49),
+  ["2.5x"] = CalculateADSSens(x25Modifier, 0.42),
+  ["3x"] = CalculateADSSens(x3Modifier, 0.35),
+  ["4x"] = CalculateADSSens(x4Modifier, 0.3),
+  ["5x"] = CalculateADSSens(x5Modifier, 0.22),
+  ["12x"] = CalculateADSSens(x12Modifier, 0.14)
+}
+ 
+local op = nil
+local team = "att"
+     
+     
+local atts = {"Sledge", "Thatcher", "Ash", "Thermite", "Twitch", "Montagne", "Glaz", "Fuze", "Blitz", "IQ", "Buck", "Blackbeard", "Capitao", "Hibana", "Jackal", "Ying", "Zofia", "Dokkaebi", "Lion", "Finka", "Maverick", "Nomad", "Gridlock", "Nokk", "Amaru", "Kali", "Iana", "Ace", "Zero", "Flores", "Osa", "Sens", "Grim", "Brava"}
+local deffs = {"Smoke", "Mute", "Castle", "Pulse", "Doc", "Rook", "Kapkan", "Tachanka", "Jager", "Bandit", "Frost", "Valkyrie", "Caveira", "Echo", "Mira", "Lesion", "Ela", "Vigil", "Maestro", "Alibi", "Clash", "Kaid", "Mozzie", "Warden", "Goyo", "Wamai", "Oryx", "Melusi", "Aruni", "Thunderbird", "Thorn", "Azami", "Solis", "Fenrir"}
+     
+     
+local r_p = {}
+local ops = {}
+local r_o = {}
+local setupstate
+local setupdata = {}
+local isinitsetup = false
+local debug = false
+ 
+-- Add attachment info table
+local attachments = {
+  -- Attackers
+  ["Ace"] = {weapon="AK-12", sight="1.5x", barrel="Compensator", grip="Angled Grip"},
+  ["Amaru"] = {weapon="G8A1", sight="1.5x", barrel="Compensator", grip="Angled Grip"},
+  ["Ash"] = {weapon="R4-C", sight="1x", barrel="Compensator", grip="Angled Grip"},
+  ["Blackbeard"] = {weapon="MK17 CQB", sight="2x", barrel="Compensator", grip="Angled Grip"},
+  ["Brava"] = {weapon="PARA-308", sight="1.5x", barrel="Compensator", grip="Angled Grip"},
+  ["Buck"] = {weapon="C8-SFW", sight="1.5x", barrel="Compensator", grip="-"},
+  ["Capitao"] = {weapon="PARA-308", sight="2x", barrel="Compensator", grip="Angled Grip"},
+  ["Dokkaebi"] = {weapon="SMG-12", sight="1x", barrel="-", grip="Angled Grip"},
+  ["Finka"] = {weapon="6P41", sight="2x", barrel="Compensator", grip="Angled Grip"},
+  ["Flores"] = {weapon="AR33", sight="2x", barrel="Compensator", grip="Angled Grip"},
+  ["Fuze"] = {weapon="6P41", sight="2x", barrel="Compensator", grip="Angled Grip"},
+  ["Glaz"] = {weapon="BEARING 9", sight="1x", barrel="Compensator", grip="-"},
+  ["Gridlock"] = {weapon="M249 SAW", sight="2x", barrel="Compensator", grip="Angled Grip"},
+  ["Grim"] = {weapon="552 COMMANDO", sight="1x", barrel="Compensator", grip="Angled Grip"},
+  ["Hibana"] = {weapon="TYPE-89", sight="2.5x", barrel="Compensator", grip="Angled Grip"},
+  ["Iana"] = {weapon="ARX200", sight="1x", barrel="Compensator", grip="Angled Grip"},
+  ["IQ"] = {weapon="552 COMMANDO", sight="1x", barrel="Compensator", grip="Angled Grip"},
+  ["Jackal"] = {weapon="C7E", sight="2x", barrel="Compensator", grip="Angled Grip"},
+  ["Kali"] = {weapon="SPSMG9", sight="1x", barrel="Compensator", grip="-"},
+  ["Lion"] = {weapon="V308", sight="2.5x", barrel="Compensator", grip="Angled Grip"},
+  ["Maverick"] = {weapon="M4", sight="1.5x", barrel="Compensator", grip="Angled Grip"},
+  ["Nokk"] = {weapon="FMG-9", sight="1.5x", barrel="Compensator", grip="-"},
+  ["Nomad"] = {weapon="AK-74M", sight="2.5x", barrel="Compensator", grip="-"},
+  ["Osa"] = {weapon="556XI", sight="2.5x", barrel="Compensator", grip="Angled Grip"},
+  ["Sens"] = {weapon="POF-9", sight="2.5x", barrel="Compensator", grip="Angled Grip"},
+  ["Sledge"] = {weapon="L85A2", sight="1.5x", barrel="Compensator", grip="Angled Grip"},
+  ["Thatcher"] = {weapon="AR33", sight="2x", barrel="Compensator", grip="Angled Grip"},
+  ["Thermite"] = {weapon="556XI", sight="2.5x", barrel="Compensator", grip="Angled Grip"},
+  ["Twitch"] = {weapon="F2", sight="1.5x", barrel="Compensator", grip="Vertical Grip"},
+  ["Ying"] = {weapon="T-95 LSW", sight="2.5x", barrel="Compensator", grip="Angled Grip"},
+  ["Zero"] = {weapon="SC3000K", sight="2x", barrel="Compensator", grip="Angled Grip"},
+  ["Zofia"] = {weapon="M762", sight="2x", barrel="Compensator", grip="Angled Grip"},
+ 
+  -- Defenders
+  ["Alibi"] = {weapon="Mx4 Storm", sight="1.5x", barrel="Compensator", grip="Angled Grip"},
+  ["Aruni"] = {weapon="P10 RONI", sight="1x", barrel="Compensator", grip="Angled Grip"},
+  ["Azami"] = {weapon="9x19VSN", sight="1x", barrel="Compensator", grip="Angled Grip"},
+  ["Bandit"] = {weapon="MP7", sight="1x", barrel="Compensator", grip="-"},
+  ["Castle"] = {weapon="UMP45", sight="1.5x", barrel="Compensator", grip="Angled Grip"},
+  ["Caveira"] = {weapon="M12", sight="1x", barrel="Compensator", grip="-"},
+  ["Clash"] = {weapon="SPSMG9", sight="1x", barrel="Compensator", grip="-"},
+  ["Doc"] = {weapon="MP5", sight="1.5x", barrel="Compensator", grip="Angled Grip"},
+  ["Echo"] = {weapon="MP5SD", sight="1.5x", barrel="-", grip="Angled Grip"},
+  ["Ela"] = {weapon="SCORPION EVO 3", sight="1x", barrel="Compensator", grip="Angled Grip"},
+  ["Fenrir"] = {weapon="MP7", sight="1x", barrel="Compensator", grip="Angled Grip"},
+  ["Frost"] = {weapon="9mm C1", sight="1.5x", barrel="Compensator", grip="Angled Grip"},
+  ["Goyo"] = {weapon="VECTOR .45 ACP", sight="1.5x", barrel="Compensator", grip="Angled Grip"},
+  ["Jager"] = {weapon="416-C CARBINE", sight="1x", barrel="Compensator", grip="Angled Grip"},
+  ["Kaid"] = {weapon="AUG A3", sight="1x", barrel="Compensator", grip="Angled Grip"},
+  ["Kapkan"] = {weapon="9x19VSN", sight="1.5x", barrel="Compensator", grip="Angled Grip"},
+  ["Lesion"] = {weapon="T-5 SMG", sight="1x", barrel="Compensator", grip="Angled Grip"},
+  ["Maestro"] = {weapon="ALDA 5.56", sight="1x", barrel="Compensator", grip="Vertical Grip"},
+  ["Melusi"] = {weapon="MP5", sight="1x", barrel="Compensator", grip="Angled Grip"},
+  ["Mira"] = {weapon="VECTOR .45 ACP", sight="1x", barrel="Compensator", grip="Angled Grip"},
+  ["Mozzie"] = {weapon="COMMANDO 9", sight="1x", barrel="Compensator", grip="Angled Grip"},
+  ["Mute"] = {weapon="SMG-11", sight="1x", barrel="Compensator", grip="Angled Grip"},
+  ["Oryx"] = {weapon="T-5 SMG", sight="1.5x", barrel="Compensator", grip="Angled Grip"},
+  ["Pulse"] = {weapon="UMP45", sight="1.5x", barrel="Compensator", grip="Angled Grip"},
+  ["Rook"] = {weapon="MP5", sight="2x", barrel="Compensator", grip="Angled Grip"},
+  ["Smoke"] = {weapon="SMG-11", sight="1x", barrel="Compensator", grip="Angled Grip"},
+  ["Solis"] = {weapon="P90", sight="1x", barrel="Compensator", grip="Angled Grip"},
+  ["Tachanka"] = {weapon="DP27", sight="1x", barrel="-", grip="-"},
+  ["Thorn"] = {weapon="UZK50GI", sight="1x", barrel="Compensator", grip="Angled Grip"},
+  ["Thunderbird"] = {weapon="SPEAR .308", sight="1x", barrel="Compensator", grip="Angled Grip"},
+  ["Valkyrie"] = {weapon="MPX", sight="1x", barrel="Compensator", grip="Angled Grip"},
+  ["Vigil"] = {weapon="K1A", sight="1x", barrel="Compensator", grip="Angled Grip"},
+  ["Wamai"] = {weapon="AUG A2", sight="1x", barrel="Compensator", grip="-"},
+  ["Warden"] = {weapon="MPX", sight="1.5x", barrel="Compensator", grip="Angled Grip"}
+}
+ 
+-- Add near the top with other settings
+local settings_locked = false
+ 
+function SetupInitialRecoils(seed)
+  r_p["Ace"] = {-1, 26, 150, -1, 20, 500, -1, 24, 500, -1, 24, 800, -1, 19, 200}
+  -- Amaru main gun
+  --r_p["Amaru"] = {0, 24, 150, -1, 21, 400, -1, 23, 700, -1, 27, 300, -1, 23, 150, -2, 24, 400, -2, 26, 550, -2, 29, 300, -2, 30, 250, -2, 25, 100}
+  -- Amaru SMG
+  r_p["Amaru"] = {0, 25, 150, -1, 21, 400, -1, 23, 700, -1, 27, 300, -1, 23, 150, -2, 24, 400, -2, 26, 550, -2, 29, 300, -2, 30, 250, -2, 25, 100}
+  r_p["Ash"] = {-1, 23, 150, -1, 20, 600, -1, 22, 1300}
+  r_p["Blackbeard"] = {0, 11, 150, 1, 9, 250, 2, 10, 650, 3, 11, 1050}
+  r_p["Brava"] = {0, 17, 150, 0, 14, 400, -1, 16, 1000, -1, 20, 1050}
+  r_p["Buck"] = {0, 21, 150, 0, 18, 650, -1, 19, 1050, -1, 23, 500}
+  r_p["Capitao"] = {0, 19, 150, 0, 16, 400, -1, 18, 1000, -1, 21, 1050}
+  -- Dokkaebi SMG
+  r_p["Dokkaebi"] = {3, 35, 150, 7, 29, 350, -2, 30, 500, -1, 33, 500}
+  r_p["Finka"] = {0, 32, 30, -1, 18, 250, 0, 18, 250, -1, 20, 500, -1, 21, 500, -1, 20, 500, 0, 21, 700}
+  r_p["Flores"] = {0, 21, 80, -1, 18, 350, 0, 19, 300, -1, 19, 200, 0, 19, 1400}
+  r_p["Fuze"] = {0, 48, 80, -1, 29, 700, -1, 33, 700, -1, 33, 1500, -2, 33, 6100}
+  r_p["Glaz"] = {0, 26, 60, 1, 24, 1600}
+  r_p["Gridlock"] = {0, 24, 60, 2, 17, 250, 3, 18, 400, 3, 20, 800, 4, 21, 1200, 4, 23, 1000, 5, 23, 1800}
+  r_p["Grim"] = {0, 16, 110, 0, 12, 500, -1, 12, 500, -1, 13, 850, 0, 14, 800}
+  r_p["Hibana"] = {0, 34, 40, -1, 22, 600, -1, 24, 300, -2, 25, 550}
+  r_p["Iana"] = {0, 21, 60, -1, 13, 1100, -1, 15, 550, -1, 17, 300}
+  r_p["IQ"] = {0, 16, 110, 0, 12, 500, -1, 12, 500, -1, 13, 850, 0, 14, 800}
+  r_p["Jackal"] = {0, 33, 70, 0, 25, 500, -1, 28, 600, -1, 28, 700}
+  r_p["Kali"] = {0, 16, 70, 1, 13, 200, -2, 13, 300, 4, 13, 1100}
+  r_p["Lion"] = {0, 32, 60, 0, 16, 300, 0, 18, 1700, 0, 21, 2300}
+  r_p["Maverick"] = {0, 29, 40, -1, 18, 200, -1, 20, 800, -1, 23, 1360}
+  r_p["Nokk"] = {0, 20, 40, 1, 14, 200, 1, 15, 800, 2, 17, 1100}
+  r_p["Nomad"] = {0, 26, 70, -1, 14, 1400, -1, 16, 1700, -1, 17, 750}
+  r_p["Osa"] = {0, 17, 80, 2, 16, 600, 3, 17, 300, 2, 17, 1800}
+  r_p["Sens"] = {1, 36, 40, 1, 21, 400, 0, 23, 1600, -1, 26, 300, -1, 26, 1800}
+  r_p["Sledge"] = {0, 21, 60, 1, 14, 450, 2, 14, 300, 2, 16, 2000}
+  r_p["Thatcher"] = {0, 21, 80, -1, 18, 350, 0, 19, 300, -1, 19, 200, 0, 19, 1400}
+  r_p["Thermite"] = {0, 17, 80, 2, 16, 600, 3, 17, 300, 2, 17, 1800}
+  r_p["Twitch"] = {0, 26, 80, -1, 22, 600, 0, 24, 200, -1, 24, 1000}
+  r_p["Ying"] = {0, 25, 60, -1, 18, 300, -1, 20, 450, 0, 21, 1800, 1, 23, 4800}
+  r_p["Zero"] = {0, 32, 40, -1, 23, 200, -1, 27, 700, -1, 28, 350, 0, 28, 650}
+  r_p["Zofia"] = {0, 31, 90, 1, 22, 600, 1, 22, 500, 0, 26, 1500}
+  
+  
+  
+  r_p["Alibi"] = {0, 32, 60, 1, 22, 600, 3, 25, 200, 3, 26, 300, 5, 26, 550, 2, 26, 350}
+  r_p["Aruni"] = {0, 30, 10, 1, 17, 1000}
+  r_p["Azami"] = {0, 30, 10, -1, 16, 650, -1, 17, 800, 0, 18, 400, 0, 19, 500}
+  r_p["Bandit"] = {0, 18, 70, 1, 14, 800, 1, 16, 300, 0, 17, 650}
+  r_p["Castle"] = {0, 26, 30, 0, 12, 250, -1, 12, 200, 0, 12, 400, -2, 11, 700, 0, 12, 1100}
+  r_p["Caveira"] = {0, 8, 1000, -1, 8, 900, 0, 9, 600, -1, 8, 800}
+  r_p["Clash"] = {0, 8, 1000, -1, 8, 900, 0, 9, 600, -1, 8, 800}
+  r_p["Doc"] = {0, 32, 30, -1, 19, 600, 0, 21, 300, -1, 21, 500, -1, 23, 900}
+  r_p["Echo"] = {0, 34, 30, -1, 21, 600, 0, 23, 300, -1, 24, 1400}
+  r_p["Ela"] = {0, 26, 100, 3, 18, 500, 3, 27, 300, 3, 26, 900, 4, 26, 600}
+  r_p["Frost"] = {0, 18, 30, 0, 12, 600, 0, 11, 1100, 1, 12, 500, 0, 13, 1300}
+  r_p["Goyo"] = {0, 31, 60, -2, 26, 250, -2, 29, 150, 0, 29, 300, 6, 29, 600}
+ 
+  r_p["Jager"] = {0, 32, 60, -1, 17, 300, -1, 19, 1000, 0, 20, 700, -1, 20, 200}
+  r_p["Kaid"] = {0, 26, 60, 1, 13, 300, 1, 13, 800, 0, 15, 1650}
+  r_p["Kapkan"] = {0, 30, 10, 0, 19, 350, -1, 21, 300, -1, 21, 800, 0, 23, 400, -1, 24, 500}
+  r_p["Lesion"] = {0, 22, 50, 0, 17, 500, -1, 19, 300, 0, 20, 300, -1, 20, 100, 1, 20, 900}
+  r_p["Maestro"] = {0, 35, 20, 0, 14, 500, 0, 15, 500, 0, 16, 500, -1, 17, 600, 0, 17, 600, 0, 18, 2600}
+  r_p["Melusi"] = {0, 28, 40, 0, 14, 600, -1, 17, 1000, -1, 18, 700}
+  r_p["Mira"] = {0, 27, 60, 1, 20, 250, 2, 22, 300, 2, 23, 700}
+  r_p["Mozzie"] = {0, 29, 50, 0, 13, 300, -1, 14, 300, 0, 14, 400, 0, 16, 400, 0, 15, 700}
+  r_p["Mute"] = {0, 38, 60, 0, 26, 500, 0, 27, 200}
+  r_p["Oryx"] = {0, 27, 50, 0, 22, 500, 0, 23, 300, 1, 24, 300, 0, 25, 100, 1, 26, 600, 4, 26, 300}
+  r_p["Pulse"] = {0, 26, 30, 0, 12, 250, -1, 12, 200, 0, 12, 400, -2, 11, 700, 0, 12, 1100}
+  r_p["Rook"] = {0, 37, 20, -1, 20, 700, 0, 23, 200, -1, 23, 600, 0, 25, 300, -2, 25, 500}
+  r_p["Smoke"] = {0, 38, 60, 0, 26, 500, 0, 27, 200}
+  r_p["Tachanka"] = {0, 20, 20, 1, 6, 300, 0, 6, 200, 1, 7, 400, 1, 7, 500, 2, 7, 1200, 3, 6, 1200, 2, 7, 1200, 2, 7, 600, 2, 7, 1700}
+  r_p["Thorn"] = {0, 26, 50, 0, 15, 500, 1, 16, 500, 1, 18, 500, 0, 19, 300}
+  r_p["Thunderbird"] = {0, 32, 30, -1, 18, 250, 0, 18, 250, -1, 20, 500, -1, 21, 500, -1, 20, 500, 0, 21, 700}
+  r_p["Valkyrie"] = {0, 29, 20, 0, 14, 500, -1, 16, 500, -1, 16, 500, 1, 17, 500, 1, 18, 300}
+  r_p["Vigil"] = {0, 27, 30, -1, 15, 300, -1, 17, 500, -1, 18, 700, -1, 17, 500, -1, 17, 500}
+  r_p["Wamai"] = {0, 18, 40, 0, 9, 300, -1, 10, 400, 1, 11, 1400, 2, 11, 500, 2, 13, 200}
+  r_p["Warden"] = {0, 32, 20, 0, 17, 300, 0, 19, 350, -1, 19, 350, -1, 21, 500, 1, 21, 300, 1, 23, 200}
+  if isinitsetup then
+    math.randomseed(math.floor(seed*math.random()))
+  else
+    math.randomseed(seed)
+  end
+  isinitsetup = true
+  for k, v in pairs(r_p) do
+    if not op or op == k then
+      for i, val in pairs(v) do
+        if i%3==0 then 
+          local prev = v[i]*1
+          local rand_diff = (math.random(1000, random_deviation*1000))/100000
+          local symb = math.random(0, 2)
+          if symb >= 1 then
+            v[i] = v[i] + math.ceil(v[i] * rand_diff)
+          else
+            v[i] = v[i] - math.floor(v[i] * rand_diff)
+          end
+          if op and debug then OutputLogMessage("\nRECOIL RANDOMIZATION (%s): [%s}: old:%sms, new:%sms\n", op, i, prev, v[i]) end
+        else
+    	v[i] = math.floor(val*sens_mul)
+        end
+      end
+      r_p[k] = v
+    end
+  end
+  
+  -- Apply scope sensitivity multiplier based on operator's scope
+  if op and attachments[op] then
+    local opScope = attachments[op].sight
+    local scopeMult = scopeSens[opScope] / Sens
+    
+    for k, v in pairs(r_p) do
+      if k == op then
+        for i, val in pairs(v) do
+          if i%3 ~= 0 then -- Only modify recoil values, not timing
+            v[i] = math.floor(val * scopeMult)
+          end
+        end
+      end
+    end
+  end
+end
+     
+for k in pairs(r_p) do
+    table.insert(ops, k)
+end
+table.sort(ops)
+     
+function GetTeam()
+  if team == "att" then return "Attackers"
+  elseif team == "def" then return "Defenders"
+  end
+  return nil
+end
+     
+function Log()
+  if not debug then ClearLog() else OutputLogMessage("\n-------------------------------------\n") end
+  if setup then
+    OutputLogMessage("Setup mode is active!")
+    if not setupstate or setupstate == 6 then OutputLogMessage(" (Done? Set \"local setup = false\" at the top)") end
+    OutputLogMessage("\n\n")
+    if not setupstate then
+      OutputLogMessage("[Step 1]: Press %s + Mouse3 (MMB) to get started\n\nIMPORTANT: During this entire setup, do NOT Save/Reload the GHub Lua Script, or you'll lose your progress.", string.upper(mod))
+    elseif setupstate == 1 then
+      OutputLogMessage("[Step 2]: Head over to Shooting Range.\nOn the select operator menu, put your mouse on the top left corner of the top-most/left-most operator's frame (sledge/smoke)\nThen press %s + Mouse3 (MMB) to record the position\n\nNote: For best results, click just outside of the corner, in the blue frame", string.upper(mod))
+    elseif setupstate == 2 then
+      OutputLogMessage("[Step 3]: Now, put your mouse on the bottom right corner of that same operator (sledge/smoke)\nThen press %s + Mouse3 (MMB) to record the position\n\nNote: For best results, click just outside of the corner, in the blue frame", string.upper(mod))
+    elseif setupstate == 3 then
+      OutputLogMessage("[Step 4]: We're halfway done!\nNow, put your mouse on the right edge frame of any right-most operator (last column) on your screen\nThen press %s + Mouse3 (MMB) to record the position\n\nNote: Use the blue outline on hovering an operator, slightly outside of the operator's frame", string.upper(mod))
+    elseif setupstate == 4 then
+      OutputLogMessage("[Step 5]: Now, put your mouse on the bottom edge frame of any bottom-most operator (last row) on your screen\nThen press %s + Mouse3 (MMB) to record the position\n\nNote: Use the blue outline on hovering an operator, slightly outside of the operator's frame", string.upper(mod))
+    elseif setupstate == 5 then
+      OutputLogMessage("[Step 6]: Almost there!\nNow, put your mouse on the top of the frame of the middle icon keybind button of the Attackers/Defenders buttons\nThen press %s + Mouse3 (MMB) to record the empty space difference for (un)ranked games", string.upper(mod))
+    elseif setupstate == 6 then
+      OutputLogMessage("[Step 7]: Last step!\nWe are done with in-game positional calculations, now, grab the code below, and copy-paste it somewhere on the top of the script (i.e. above \"local setup = true\") - and also set \"setup\" to false at the top.\nRefer to the UC forum post for a usage guide\nRemember that changing resolution or even window positions/settings will likely break these settings, and you might need to do them again.")
+      OutputLogMessage("\n\nlocal at = %s", dump(setupdata))
+    end
+  	if setupstate ~= 6 and setupstate and setupstate > 1 then OutputLogMessage("\n\n[setupdata] = %s", dump(setupdata)) end
+    return
+  end
+  local disablerText
+  if IsKeyLockOn(disabler) then disablerText = "ON" else disablerText = "OFF" end
+  OutputLogMessage("Current mode: %s | Disabler is %s | Settings %s", 
+    GetTeam(), 
+    disablerText,
+    settings_locked and "LOCKED" or "UNLOCKED"
+  )
+  OutputLogMessage("\nFizzler's + Nevermore's Recoil Script")
+  
+  if debug == true then 
+    local x,y = GetMousePosition()
+    OutputLogMessage("\nMouse Position: %s | %s", x, y) 
+  end
+  
+  OutputLogMessage("\nSelected Operator: %s", op)
+  if attachments[op] then
+    OutputLogMessage("\nRecommended Loadout:")
+    OutputLogMessage("\n  Weapon: %s", attachments[op].weapon)
+    OutputLogMessage("\n  Sight: %s", attachments[op].sight)
+    OutputLogMessage("\n  Barrel: %s", attachments[op].barrel) 
+    OutputLogMessage("\n  Grip: %s", attachments[op].grip)
+  end
+end
+     
+     
+function UpdateRec()
+  local x,y = GetMousePosition()
+  SetupInitialRecoils(x + y)
+  r_o = r_p[op] or {}
+  if debug == true then OutputLogMessage("Setting recoil to %s, (%s)\n", r_o, op) end
+  Log()
+end
+     
+function QuickPeek(firstKey, secondKey)
+  PressKey(firstKey)
+  Sleep(72)  -- 0.072 seconds
+  ReleaseKey(firstKey)
+  Sleep(13)  -- 0.013 seconds
+  PressKey(secondKey)
+  Sleep(47)  -- 0.047 seconds
+  ReleaseKey(secondKey)
+end
+ 
+function OnEvent(event, arg)
+  EnablePrimaryMouseButtonEvents(true)
+  
+  -- Add quick peek detection for Q and E keys
+  if event == "G_PRESSED" then
+    -- Quick peek right (E then Q)
+    if arg == "e" then
+      QuickPeek("e", "q")
+      return
+    end
+    
+    -- Quick peek left (Q then E)
+    if arg == "q" then
+      QuickPeek("q", "e")
+      return
+    end
+  end
+  
+  -- Add settings lock toggle with Alt+Mouse5
+  if event == "MOUSE_BUTTON_PRESSED" and arg == 5 and IsModifierPressed(mod) then
+    settings_locked = not settings_locked
+    Log() -- Update display to show locked status
+    return
+  end
+  
+  -- Handle recoil control first (so it always works regardless of lock)
+  if event == "MOUSE_BUTTON_PRESSED" then
+    if arg == 1 and IsMouseButtonPressed(3) and not IsKeyLockOn(disabler) and not IsModifierPressed(mod) then
+      for xy = 3, #r_o, 3 do
+        local c_t = GetRunningTime()
+        local h_r = r_o[xy-2]
+        local v_r = r_o[xy-1]
+        local r_d = r_o[xy]
+        repeat
+          local d_t = GetRunningTime() - c_t
+          MoveMouseRelative(h_r, v_r)
+          Sleep(10)
+        until d_t >= r_d or not IsMouseButtonPressed(1) or not IsMouseButtonPressed(3) or IsModifierPressed(mod) or IsKeyLockOn(disabler)
+        if not IsMouseButtonPressed(1) or not IsMouseButtonPressed(3) or IsModifierPressed(mod) or IsKeyLockOn(disabler) then break end
+      end
+      return
+    end
+    
+    -- Block settings changes if locked
+    if settings_locked and IsModifierPressed(mod) then
+      if arg == 3 or arg == 1 or arg == 2 or arg == 4 then
+        return -- Block team/operator/scope changes when locked
+      end
+      return
+    end
+    
+    -- Alt + Mouse3 to switch teams
+    if arg == 3 and IsModifierPressed(mod) then
+      if team == "att" then
+        team = "def"
+        op = deffs[1] -- Default to first defender
+      else
+        team = "att" 
+        op = atts[1] -- Default to first attacker
+      end
+      UpdateRec()
+      return
+    end
+    
+    -- Alt + Mouse1/2 to cycle operators
+    if (arg == 1 or arg == 2) and IsModifierPressed(mod) then
+      local ops_list = team == "att" and atts or deffs
+      local current_index = indexOf(ops_list, op) or 1
+      
+      if arg == 1 then -- Next operator
+        current_index = current_index + 1
+        if current_index > #ops_list then current_index = 1 end
+      else -- Previous operator 
+        current_index = current_index - 1
+        if current_index < 1 then current_index = #ops_list end
+      end
+      
+      op = ops_list[current_index]
+      UpdateRec()
+      return
+    end
+  end
+  
+  if event == "MOUSE_BUTTON_PRESSED" and IsModifierPressed(mod) then
+    -- Cycle scopes with Mouse4/5 if operator selected
+    if arg == 4 or arg == 5 and op then
+      local scopes = {"1x", "1.5x", "2x", "2.5x", "3x", "4x", "5x", "12x"}
+      local currentScope = attachments[op].sight
+      local currentIndex = indexOf(scopes, currentScope) or 1
+      
+      if arg == 4 then -- Next scope
+        currentIndex = currentIndex + 1
+        if currentIndex > #scopes then currentIndex = 1 end
+      else -- Previous scope
+        currentIndex = currentIndex - 1 
+        if currentIndex < 1 then currentIndex = #scopes end
+      end
+      
+      attachments[op].sight = scopes[currentIndex]
+      UpdateRec()
+    end
+  end
+end
+     
+function indexOf(array, value)
+  for i, v in ipairs(array) do
+    if v == value then
+      return i
+    end
+  end
+  return nil
+end
+     
+UpdateRec()
